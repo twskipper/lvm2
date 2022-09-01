@@ -6,18 +6,12 @@ import (
 )
 
 func TestGetLVS(t *testing.T) {
-	r, err := GetLvReport()
+	r, err := GetLvReportAll()
 	if err != nil {
 		t.Error(err)
 	}
-
-	//fmt.Printf("%+v\n", r)
-	allLv := r.GetAllLv()
-	for _, lv := range allLv {
-		if lv.LvDmPath == "/dev/mapper/vgubuntu-root" {
-			fmt.Printf("%+v\n", lv)
-			fmt.Println(lv.VgFree, lv.VgName,lv.LvName,lv.VgUUID,lv.LvDmPath,lv.LvPath,lv.LvParent)
-		}
-
-	}
+	isl := r.IsLv("/dev/mapper/vgubuntu-root")
+	fmt.Println(isl)
+	lv := r.GetLv("/dev/mapper/vgubuntu-root")
+	fmt.Printf("%+v\n", lv)
 }

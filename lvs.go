@@ -6,25 +6,35 @@ import (
 )
 
 var (
-	LVSALLCommand = []string{"sudo", "lvs", "-o", "all", "--reportformat", "json"}
+	LvsAllCmd = []string{"lvs", "-o", "all", "--reportformat", "json", "--units", "b"}
 )
 
-type LVSALL struct {
+type LVReportAll struct {
 	Report []LVReport `json:"report"`
 }
 
-func (l LVSALL) GetAllLv() []Lv {
+func (l LVReportAll) GetAllLv() []Lv {
 	var lv []Lv
 	for _, r := range l.Report {
 		lv = append(lv, r.Lv...)
 	}
 	return lv
 }
-
-// lvs only return one
-func (l LVSALL) GetLVReport() *LVReport {
-	for _, r := range l.Report {
-		return &r
+func (l LVReportAll) IsLv(name string) bool {
+	lvs := l.GetAllLv()
+	for _, lv := range lvs {
+		if lv.LvDmPath == name || lv.LvPath == name || lv.LvName == name {
+			return true
+		}
+	}
+	return false
+}
+func (l LVReportAll) GetLv(name string) *Lv {
+	lvs := l.GetAllLv()
+	for _, lv := range lvs {
+		if lv.LvDmPath == name || lv.LvPath == name || lv.LvName == name {
+			return &lv
+		}
 	}
 	return nil
 }
@@ -180,13 +190,13 @@ func (r *LVReport) GetLvUUID(lvUUID string) *Lv {
 	return nil
 }
 
-func GetLvReport() (*LVSALL, error) {
-	cmd := exec.Command(LVSALLCommand[0], LVSALLCommand[1:]...)
+func GetLvReportAll() (*LVReportAll, error) {
+	cmd := exec.Command("sudo", LvsAllCmd...)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
-	var r LVSALL
+	var r LVReportAll
 	err = json.Unmarshal(out, &r)
 	if err != nil {
 		return nil, err
