@@ -6,7 +6,7 @@ import (
 	"os/exec"
 )
 
-var findmntCommand = []string{
+var FindmntCommand = []string{
 	"findmnt",
 	"--real",
 	"--json",
@@ -55,7 +55,7 @@ func (m Mnt) GetInfoOfMountPoint(mp string) (*Children, error) {
 }
 
 func GetMnt() (*Mnt, error) {
-	cmd := exec.Command(findmntCommand[0], findmntCommand[1:]...)
+	cmd := exec.Command(FindmntCommand[0], FindmntCommand[1:]...)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
