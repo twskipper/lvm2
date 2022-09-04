@@ -14,5 +14,6 @@ func TestGetVGS(t *testing.T) {
 	fmt.Println(vgs.IsVG("vgubuntu"))
 	vg := vgs.GetVG("vgubuntu")
 	fmt.Printf("%+v\n", vg)
+	fmt.Println(vgs.GetTotalFreeSize())
 
 }

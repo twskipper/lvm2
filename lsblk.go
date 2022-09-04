@@ -2,11 +2,13 @@ package lvm2
 
 import (
 	"encoding/json"
+	"errors"
 	"os/exec"
+	"strings"
 )
 
 var (
-	LSBLKCommand = []string{"lsblk", "-O", "--json"}
+	LSBLKCmd = []string{"lsblk", "-O", "--json", "-b"}
 )
 
 type Blockdevices struct {
@@ -38,7 +40,7 @@ type Blockdevice struct {
 	Hotplug    bool          `json:"hotplug"`
 	Model      string        `json:"model"`
 	Serial     string        `json:"serial"`
-	Size       string        `json:"size"`
+	Size       int           `json:"size"`
 	State      string        `json:"state"`
 	Owner      string        `json:"owner"`
 	Group      string        `json:"group"`
@@ -53,10 +55,10 @@ type Blockdevice struct {
 	RqSize     int           `json:"rq-size"`
 	Type       string        `json:"type"`
 	DiscAln    int           `json:"disc-aln"`
-	DiscGran   string        `json:"disc-gran"`
-	DiscMax    string        `json:"disc-max"`
+	DiscGran   int           `json:"disc-gran"`
+	DiscMax    int           `json:"disc-max"`
 	DiscZero   bool          `json:"disc-zero"`
-	Wsame      string        `json:"wsame"`
+	Wsame      int           `json:"wsame"`
 	Wwn        interface{}   `json:"wwn"`
 	Rand       bool          `json:"rand"`
 	Pkname     interface{}   `json:"pkname"`
@@ -69,21 +71,41 @@ type Blockdevice struct {
 	Children   []Blockdevice `json:"children,omitempty"`
 }
 
-func (b Blockdevices) GetInfoOfBlock() {
+func SearchBlk(blk *Blockdevice, path string) *Blockdevice {
+	if blk.Path == path {
+		return blk
+	}
+	for _, v := range blk.Children {
+		r := SearchBlk(&v, path)
+		if r != nil {
+			return r
+		}
+	}
+	return nil
+}
+
+func (b *Blockdevices) GetBlkByPath(s string) (*Blockdevice, error) {
+	for _, v := range b.Blockdevices {
+		b := SearchBlk(&v, s)
+		if b != nil {
+			return b, nil
+		}
+	}
+	return nil, errors.New("not found")
 
 }
-func (b Blockdevices) GetFreeBlockDevices() []string {
-	var free []string
+func (b Blockdevices) GetFreeBlockDevices() []Blockdevice {
+	var free []Blockdevice
 	for _, v := range b.Blockdevices {
 		if v.Type == "disk" && v.Fstype == "" && v.Children == nil {
-			free = append(free, v.Path)
+			free = append(free, v)
 		}
 	}
 	return free
 }
 
 func GetBlockdevices() (*Blockdevices, error) {
-	cmd := exec.Command(LSBLKCommand[0], LSBLKCommand[1:]...)
+	cmd := exec.Command(LSBLKCmd[0], LSBLKCmd[1:]...)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
@@ -93,4 +115,18 @@ func GetBlockdevices() (*Blockdevices, error) {
 		return nil, err
 	}
 	return &b, nil
+}
+
+func GetBlockdevicesOverSSH(ssh *Client) (*Blockdevices, error) {
+	c := "sudo " + strings.Join(LSBLKCmd, " ")
+	out, err := ssh.Cmd(c).Output()
+	if err != nil {
+		return nil, err
+	}
+	var r Blockdevices
+	err = json.Unmarshal(out, &r)
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
 }

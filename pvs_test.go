@@ -6,11 +6,11 @@ import (
 )
 
 func TestGetPv(t *testing.T) {
-	pv, err := GetPvReportAll()
+	pv, err := GetPVReportAll()
 	if err != nil {
 		t.Error(err)
 	}
 	fmt.Printf("%+v\n", pv)
 	fmt.Println(pv.IsPv("/dev/sda5"))
-	fmt.Println(pv.GetTotalFreeSizeBytes())
+	fmt.Println(pv.GetAllFreePv())
 }

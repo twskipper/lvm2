@@ -3,6 +3,7 @@ package lvm2
 import (
 	"encoding/json"
 	"os/exec"
+	"strings"
 )
 
 var (
@@ -190,9 +191,23 @@ func (r *LVReport) GetLvUUID(lvUUID string) *Lv {
 	return nil
 }
 
-func GetLvReportAll() (*LVReportAll, error) {
+func GetLVReportAll() (*LVReportAll, error) {
 	cmd := exec.Command("sudo", LvsAllCmd...)
 	out, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	var r LVReportAll
+	err = json.Unmarshal(out, &r)
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
+
+func GetLVReportAllOverSSH(ssh *Client) (*LVReportAll, error) {
+	c := "sudo " + strings.Join(LvsAllCmd, " ")
+	out, err := ssh.Cmd(c).Output()
 	if err != nil {
 		return nil, err
 	}

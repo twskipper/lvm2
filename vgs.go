@@ -3,6 +3,7 @@ package lvm2
 import (
 	"encoding/json"
 	"os/exec"
+	"strings"
 )
 
 var (
@@ -100,6 +101,20 @@ func GetVGReportAll() (*VGReportAll, error) {
 	c := VgsAllCmd
 	cmd := exec.Command("sudo", c...)
 	out, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	var r VGReportAll
+	err = json.Unmarshal(out, &r)
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
+
+func GetVGReportAllOverSSH(ssh *Client) (*VGReportAll, error) {
+	c := "sudo " + strings.Join(VgsAllCmd, " ")
+	out, err := ssh.Cmd(c).Output()
 	if err != nil {
 		return nil, err
 	}

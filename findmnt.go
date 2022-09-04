@@ -2,8 +2,9 @@ package lvm2
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"os/exec"
+	"strings"
 )
 
 var FindmntCommand = []string{
@@ -51,7 +52,7 @@ func (m Mnt) GetInfoOfMountPoint(mp string) (*Children, error) {
 			}
 		}
 	}
-	return nil, errors.New("mount point not found")
+	return nil, fmt.Errorf("%s mount point not found", mp)
 }
 
 func GetMnt() (*Mnt, error) {
@@ -67,4 +68,18 @@ func GetMnt() (*Mnt, error) {
 	}
 	return &mnt, nil
 
+}
+
+func GetMntOverSSH(ssh *Client) (*Mnt, error) {
+	c := "sudo " + strings.Join(FindmntCommand, " ")
+	out, err := ssh.Cmd(c).Output()
+	if err != nil {
+		return nil, err
+	}
+	var mnt Mnt
+	err = json.Unmarshal(out, &mnt)
+	if err != nil {
+		return nil, err
+	}
+	return &mnt, nil
 }

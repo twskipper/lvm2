@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-func ParseLvmSizeToBytes(s string) (int, error) {
+func ParseLvmSizeToBytesInt(s string) (int, error) {
 	var size int
 	var err error
 	if s[len(s)-1] == 'B' {

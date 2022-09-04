@@ -6,7 +6,7 @@ import (
 )
 
 func TestGetLVS(t *testing.T) {
-	r, err := GetLvReportAll()
+	r, err := GetLVReportAll()
 	if err != nil {
 		t.Error(err)
 	}
@@ -14,4 +14,5 @@ func TestGetLVS(t *testing.T) {
 	fmt.Println(isl)
 	lv := r.GetLv("/dev/mapper/vgubuntu-root")
 	fmt.Printf("%+v\n", lv)
+	fmt.Println(lv.LvLayout, lv.VgName)
 }

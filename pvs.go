@@ -3,24 +3,36 @@ package lvm2
 import (
 	"encoding/json"
 	"os/exec"
+	"strings"
 )
 
 var (
 	PvsAllCmd = []string{"pvs", "-o", "all,vg_all", "--reportformat", "json", "--units", "b"}
 )
 
-type PvReportAll struct {
+type PVReportAll struct {
 	Report []PvReport `json:"report"`
 }
 
-func (p PvReportAll) GetAllPv() []Pv {
+func (p PVReportAll) GetAllPv() []Pv {
 	var pv []Pv
 	for _, r := range p.Report {
 		pv = append(pv, r.Pv...)
 	}
 	return pv
 }
-func (p PvReportAll) IsPv(name string) bool {
+
+func (p PVReportAll) GetAllFreePv() []Pv {
+	pvs := p.GetAllPv()
+	var fpv []Pv
+	for _, pv := range pvs {
+		if pv.VgName == "" {
+			fpv = append(fpv, pv)
+		}
+	}
+	return fpv
+}
+func (p PVReportAll) IsPv(name string) bool {
 	pvs := p.GetAllPv()
 	for _, pv := range pvs {
 		if pv.PvName == name || pv.PvUUID == name {
@@ -29,7 +41,7 @@ func (p PvReportAll) IsPv(name string) bool {
 	}
 	return false
 }
-func (p PvReportAll) GetPv(name string) *Pv {
+func (p PVReportAll) GetPv(name string) *Pv {
 	pvs := p.GetAllPv()
 	for _, pv := range pvs {
 		if pv.PvName == name || pv.PvUUID == name {
@@ -38,7 +50,7 @@ func (p PvReportAll) GetPv(name string) *Pv {
 	}
 	return nil
 }
-func (p PvReportAll) GetPvByVg(vg string) []Pv {
+func (p PVReportAll) GetPvByVg(vg string) []Pv {
 	var pv []Pv
 	for _, r := range p.Report {
 		for _, p := range r.Pv {
@@ -50,20 +62,20 @@ func (p PvReportAll) GetPvByVg(vg string) []Pv {
 	return pv
 }
 
-func (p PvReportAll) GetTotalFreeSizeBytes() (int, error) {
-	var total int
+// func (p PvReportAll) GetTotalFreeSizeBytes() (int, error) {
+// 	var total int
 
-	for _, r := range p.Report {
-		for _, p := range r.Pv {
-			size, err := ParseLvmSizeToBytes(p.PvFree)
-			if err != nil {
-				return 0, err
-			}
-			total += size
-		}
-	}
-	return total, nil
-}
+// 	for _, r := range p.Report {
+// 		for _, p := range r.Pv {
+// 			size, err := ParseLvmSizeToBytes(p.PvFree)
+// 			if err != nil {
+// 				return 0, err
+// 			}
+// 			total += size
+// 		}
+// 	}
+// 	return total, nil
+// }
 
 type Pv struct {
 	PvFmt              string `json:"pv_fmt"`
@@ -131,14 +143,28 @@ type PvReport struct {
 	Pv []Pv `json:"pv"`
 }
 
-func GetPvReportAll() (*PvReportAll, error) {
+func GetPVReportAll() (*PVReportAll, error) {
 	c := PvsAllCmd
 	cmd := exec.Command("sudo", c...)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
-	var r PvReportAll
+	var r PVReportAll
+	err = json.Unmarshal(out, &r)
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
+
+func GetPVReportAllOverSSH(ssh *Client) (*PVReportAll, error) {
+	c := "sudo " + strings.Join(PvsAllCmd, " ")
+	out, err := ssh.Cmd(c).Output()
+	if err != nil {
+		return nil, err
+	}
+	var r PVReportAll
 	err = json.Unmarshal(out, &r)
 	if err != nil {
 		return nil, err
