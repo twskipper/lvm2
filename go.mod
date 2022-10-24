@@ -1,4 +1,4 @@
-module scm.2be.dev/ah/lvm2
+module github.com/twskipper/lvm2
 
 go 1.18
 
