@@ -6,6 +6,7 @@ type LvmReport struct {
 	PVReport     *PVReportAll  `json:"pv_report,omitempty"`
 	Blockdevices *Blockdevices `json:"blockdevices,omitempty"`
 	Mnt          *Mnt          `json:"mnt,omitempty"`
+	DF           *DFReport     `json:"df,omitempty"`
 }
 
 func GetLvmReportAll() (*LvmReport, error) {
@@ -30,12 +31,16 @@ func GetLvmReportAll() (*LvmReport, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	df, err := GetDFReport()
+	if err != nil {
+		return nil, err
+	}
 	lr.LVReport = lvr
 	lr.VGReport = vgr
 	lr.PVReport = pvr
 	lr.Blockdevices = blks
 	lr.Mnt = mnt
+	lr.DF = df
 	return &lr, nil
 }
 
@@ -53,11 +58,12 @@ func GetLvmReportAllOverSSH(sshClient *Client) (*LvmReport, error) {
 	if err != nil {
 		return nil, err
 	}
-	blks, err := GetBlockdevicesOverSSH(sshClient)
+
+	mnt, err := GetMntOverSSH(sshClient)
 	if err != nil {
 		return nil, err
 	}
-	mnt, err := GetMntOverSSH(sshClient)
+	blks, err := GetBlockdevicesOverSSH(sshClient)
 	if err != nil {
 		return nil, err
 	}

@@ -1,16 +1,19 @@
 package lvm2
 
 import (
-	"encoding/json"
+	"bufio"
 	"fmt"
 	"os/exec"
 	"strings"
 )
 
+// findmnt  -l -n -o TARGET,SOURCE,FSTYPE,OPTIONS
 var FindmntCommand = []string{
 	"findmnt",
-	"--real",
-	"--json",
+	"-n",
+	"-r",
+	"-o",
+	"TARGET,SOURCE,FSTYPE,OPTIONS",
 }
 
 type Mnt struct {
@@ -18,11 +21,11 @@ type Mnt struct {
 }
 
 type Filesystems struct {
-	Target   string     `json:"target"`
-	Source   string     `json:"source"`
-	Fstype   string     `json:"fstype"`
-	Options  string     `json:"options"`
-	Children []Children `json:"children"`
+	Target  string `json:"target"`
+	Source  string `json:"source"`
+	Fstype  string `json:"fstype"`
+	Options string `json:"options"`
+	//Children []Children `json:"children"`
 }
 
 type Children struct {
@@ -42,15 +45,6 @@ func (m Mnt) GetInfoOfMountPoint(mp string) (*Children, error) {
 			c.Target = fs.Target
 			return &c, nil
 		}
-		for _, child := range fs.Children {
-			if child.Target == mp {
-				c.Fstype = child.Fstype
-				c.Options = child.Options
-				c.Source = child.Source
-				c.Target = child.Target
-				return &c, nil
-			}
-		}
 	}
 	return nil, fmt.Errorf("%s mount point not found", mp)
 }
@@ -61,13 +55,38 @@ func GetMnt() (*Mnt, error) {
 	if err != nil {
 		return nil, err
 	}
-	var mnt Mnt
-	err = json.Unmarshal(out, &mnt)
+	mnt := DecodeLineTextFromFindmnt(out)
 	if err != nil {
 		return nil, err
 	}
 	return &mnt, nil
 
+}
+
+// $ findmnt  -l -o TARGET,SOURCE,FSTYPE,OPTIONS
+// header: TARGET                     SOURCE     FSTYPE     OPTIONS
+// /sys                       sysfs      sysfs      rw,nosuid,nodev,noexec,relatime
+// /proc                      proc       proc       rw,nosuid,nodev,noexec,relatime
+// /dev                       devtmpfs   devtmpfs   rw,nosuid,size=3992644k,nr_inodes=998161,mode=755
+// /sys/kernel/security       securityfs securityfs rw,nosuid,nodev,noexec,relatime
+func DecodeLineTextFromFindmnt(output []byte) Mnt {
+	var mnt Mnt
+	var fs []Filesystems
+	scanner := bufio.NewScanner(strings.NewReader(string(output)))
+	for scanner.Scan() {
+		if scanner.Text() == "" {
+			continue
+		}
+		s := strings.Split(scanner.Text(), " ")
+		var f Filesystems
+		f.Target = s[0]
+		f.Source = s[1]
+		f.Fstype = s[2]
+		f.Options = s[3]
+		fs = append(fs, f)
+	}
+	mnt.Filesystems = fs
+	return mnt
 }
 
 func GetMntOverSSH(ssh *Client) (*Mnt, error) {
@@ -76,8 +95,7 @@ func GetMntOverSSH(ssh *Client) (*Mnt, error) {
 	if err != nil {
 		return nil, err
 	}
-	var mnt Mnt
-	err = json.Unmarshal(out, &mnt)
+	mnt := DecodeLineTextFromFindmnt(out)
 	if err != nil {
 		return nil, err
 	}
